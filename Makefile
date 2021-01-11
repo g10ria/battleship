@@ -2,12 +2,16 @@ compile=gcc
 buildDir=bin
 headersDir=headers
 
-deps = headers/battleship.h headers/hashmap.h
+# deps = headers/battleship.h headers/hashmap.h
 
-obj = battleship.o hashmap.o
+Bobj = battleship.o hashmap.o
+Hobj =hangman.o
 
 %.o: %.c
 	$(compile) -c -o $@ $<
 
-battleship: $(obj)
+battleship: $(Bobj)
+	$(compile) -o ${buildDir}/$@ $^ -I/$(headersDir)
+
+hangman: $(Hobj)
 	$(compile) -o ${buildDir}/$@ $^ -I/$(headersDir)
