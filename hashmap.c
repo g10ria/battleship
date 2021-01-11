@@ -1,9 +1,14 @@
 /**
- * Simple hashmap in C. Only includes adding and fetching by key,
- * does not include removing key-value pairs.
+ * This was a simple integer-integer hashmap I wrote for
+ * my ATCS Compilers and Interpreters class. It can only
+ * handle putting in and retrieving numbers, and can not
+ * remove or search for elements in the map. It also tries
+ * to simulate some level of object-oriented-ness (kind of lol).
  * 
- * Provide keys and values as strings. Pick a hash function
- * from ./hashfunctions.c and pick a map size in the variable size.
+ * For the purposes of the battleship project, the
+ * NULL value placeholder has just been changed to -1
+ * because it's easier and battleship never puts -1
+ * in the map anyway.
  */
 
 #include "./headers/hashmap.h"
@@ -11,15 +16,14 @@
 int size = 1024; // size of 1 level of hashmap
 
 /**
- * Knuth hash function (integers only)
+ * Knuth hash function
  * @param a the integer number
- * @param size the size of the map
  */ 
 int hash(int a) {         
     return (a*2654435761) % size;
 }
 
-// pseudo-linked list
+// pseudo-linked list 
 struct entry
 {
     int key;          // unhashed int key
@@ -28,7 +32,7 @@ struct entry
 };
 
 /**
- * Allocates space for the map and initializes null values
+ * Allocates space for the map and initializes -1 values
  */
 struct entry *initializeHashmap()
 {
@@ -45,24 +49,11 @@ struct entry *initializeHashmap()
     return map;
 }
 
-void printKeys(struct entry *map)
-{
-    for (int i = 0; i < size; i++)
-    {
-        printf("%d ", map[i].key);
-    }
-    printf("\n");
-}
-
-int getSize()
-{
-    return size;
-}
-
 /**
- * Adds an entry to the map. Three cases: the address is unoccupied in the
- * array, the address is occupied and the key exists, and the address
- * is occupied but the key does not exist.
+ * Adds an entry to the map.
+ * Case 1: the address is unoccupied in the array
+ * Case 2: the address is occupied and the key exists
+ * Case 3: the address is occupied but the key does not exist
  * 
  * @param ent pointer to the entry to add
  */
@@ -72,23 +63,15 @@ void addEntry(struct entry *ent, struct entry *map)
     struct entry *current = map + address;
 
     // empty list, add key-value pair directly
-    if (current->key == -1) {
-        map[address] = *ent;
-    }
+    if (current->key == -1) map[address] = *ent;
     else
     {
         // get to the tail of the list or the first matching key
-        while (current->next != NULL && ent->key != current->key) {
-            current = current->next;
-        }
+        while (current->next != NULL && ent->key != current->key) current = current->next;
 
         // key exists, just replace the value
-        if (ent->key == current->key) {
-            current->val = ent->val;
-        }
-        else {
-            current->next = ent; // otherwise concat it to the list
-        }
+        if (ent->key == current->key) current->val = ent->val;
+        else current->next = ent; // otherwise concat it to the list
     }
 
     return;
@@ -111,11 +94,11 @@ int get(int key, struct entry *map)
 }
 
 /**
- * Puts a new string value into the map given an integer key
+ * Puts a new value into the map
  * 
- * @param key the key (an integer)
- * @param key the key (as a string)
+ * @param key the key
  * @param value the value
+ * @param map the map
  */
 void put(int key, int value, struct entry *map)
 {
