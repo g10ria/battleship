@@ -23,14 +23,17 @@
 
 struct status
 {
-    int numGuesses;
-    int guesses[ALPH_LENGTH];
-    int guessResults[ALPH_LENGTH];
-    int lieFound;
-    int lieIndex;
+    int numGuesses; // for printing
+    int guesses[ALPH_LENGTH]; // for printing
+    int guessResults[ALPH_LENGTH]; // for printing
+
+    int lieFound; // if a lie has been found
+    int lieIndex; // index of the lie (in the guesses) - also for printing
+
+    int alphabetStatuses[ALPH_LENGTH]; // status of each letter
 };
 
-struct status status;
+struct status status; // global status variable
 
 char *wordsList;
 int numWords;
@@ -46,12 +49,21 @@ int tempMissed[ALPH_LENGTH]; // for checking entropy; missed flags for letters
 
 int phraseLength;
 
+int numUnconfirmedMisses;
+int numConfirmedMisses;
+int totalMisses;
+
+int testingMissPossibility;
+char mustHave;
+
 /* ----- FUNCTION DECLARATIONS ----- */
 
 double entropy();
 double entropyLieFound();
 double entropyLieNotFound();
 double entropyOfStatus();
+double entropyNoLie();
+double entropyWithLie();
 
 void populateWordsList();
 void allocateCurrLetters();
@@ -59,6 +71,8 @@ void allocateCurrLetters();
 int ind2(int i, int j);
 int ind3(int i, int j, int k);
 char ch(int i, int j, int k);
+
+void init();
 
 /* ----- CODE ----- */
 
@@ -70,8 +84,10 @@ int main()
 {
     numWords = 2;
     wordLengths = malloc(sizeof(int) * numWords);
-    wordLengths[0] = 15;
-    wordLengths[1] = 16;
+    wordLengths[0] = 14;
+    wordLengths[1] = 15;
+
+    init();
 
     allocateCurrLetters();
     populateWordsList();
@@ -79,87 +95,149 @@ int main()
     status.numGuesses = 0;
     status.lieFound = 1;
 
+    // int * test = malloc(8);
+    // printf("dunzo\n");
     
     // move this somewhere else lol
-    for (int i = 0; i < ALPH_LENGTH; i++)
-    {
-        tempMissed[i] = 0;
-    }
-    tempMissed[12] = 1;
+    
+    status.alphabetStatuses[2] = 3; // set c to unconfirmed miss
+    // currLetters[0] = 'r';
 
-    printf("%f\n", entropyOfStatus());
+    numUnconfirmedMisses = 1;
+
+    printf("%f\n", entropyWithLie());
 
     return 0;
 }
 
-void allocateCurrLetters()
-{
-    phraseLength = 0;
-    for (int i = 0; i < numWords; i++)
+void init() {
+    testingMissPossibility = 0;
+    for (int i = 0; i < ALPH_LENGTH; i++)
     {
-        phraseLength += wordLengths[i];
-        if (i > 0)
-            phraseLength++; // add the space
+        status.alphabetStatuses[i] = 0;
     }
-    currLetters = malloc(sizeof(char) * phraseLength);
-
-    for (int i = 0; i < phraseLength; i++)
-    {
-        currLetters[i] = ' ';
-    }
-
-    return;
 }
-
-// struct status
-// {
-//     int numGuesses;
-//     int guesses[ALPH_LENGTH];
-//     int guessResults[ALPH_LENGTH];
-//     int lieFound;
-//     int lieIndex;
-// };
 
 int testCombination(int *indices)
 {
+    int has = 0; // if we have the mustHave or not
+
     int curr = 0;
     char c;
+
     for (int j = 0; j < numWords; j++)
     {
         for (int k = 0; k < wordLengths[j]; k++)
         {
+            // current character in the combination being tested
             c = ch(j, indices[j], k);
             // printf("%c is %d\n", c, c);
+
+            // we have the mustHave character
+            if (testingMissPossibility && c-97 == mustHave) has = 1;
             
             for(int i=0;i<ALPH_LENGTH;i++) {
-                
-                if (tempMissed[c-97]) return 0;
+                // if the character is supposed to be missed
+                if (status.alphabetStatuses[c-97] == 2 || status.alphabetStatuses[c-97] == 3)
+                    return 0;
             }
 
-            if (currLetters[curr] != ' ') // filled
-            {
-                if (ch(j, indices[j], k) != currLetters[curr])
-                {
-                    return 0;
-                }
-            }
+            // if the character doesn't match the template
+            if (currLetters[curr] != ' ' && ch(j, indices[j], k) != currLetters[curr]) return 0;
 
             curr++;
         }
         curr++;
     }
+    if (testingMissPossibility && !has) return 0;
     return 1;
 }
 
-double entropyLieFound() {
-    return 0.0;
+double entropyNoLie() {
+    return entropyOfStatus(1.0);
+    // takes the entropy of the current status; assumes the lie has
+    // already been found and corrected
 }
 
-double entropyOfStatus()
+double entropyWithLie() {
+    
+    /**
+     * alphabetStatuses:
+     * 
+     * 0 = unguessed
+     * 1 = hit
+     * 2 = missed (confirmed)
+     * 3 = missed (unconfirmed)
+     * 4 = must have (don't know where)
+     * 
+     */ 
+
+    // if something going from a miss to a hit yields no results, then
+    // it's a confirmed miss (cannot have been a lie)
+    for(int i=0;i<ALPH_LENGTH;i++) {
+        if (status.alphabetStatuses[i] == 3) {
+
+            status.alphabetStatuses[i] = 4; // set to must have
+            mustHave = i;
+            testingMissPossibility = 1;
+
+            if (entropyOfStatus(1.0) < 0) // invalid
+            {
+                printf("%c is a confirmed miss\n", i);
+                status.alphabetStatuses[i] = 2; // confirmed miss
+                numUnconfirmedMisses--;
+                numConfirmedMisses++;
+            }
+            testingMissPossibility = 0;
+            status.alphabetStatuses[i] = 3;
+        }
+    }
+
+    // if (numUnconfirmedMisses == 0) return entropyNoLie();
+
+    double probOfLie = 1.0 / ((double) numUnconfirmedMisses + 1);
+
+    printf("%f chance of lying\n", probOfLie);
+
+    double entropy = 0.0;
+
+    printf("getting entropy with no misses:\n");
+
+    entropy += entropyOfStatus(probOfLie);
+
+    printf("entropy before misses: %f\n", entropy);
+
+    printf("getting entropy with a miss\n");
+
+    for(int i=0;i<ALPH_LENGTH;i++) {
+        if (status.alphabetStatuses[i] == 3) {
+
+            status.alphabetStatuses[i] = 4; // set to must have
+            mustHave = i;
+            testingMissPossibility = 1;
+
+            double e = entropyOfStatus(probOfLie);
+
+            entropy += e;
+
+            testingMissPossibility = 0;
+
+            status.alphabetStatuses[i] = 3;
+        }
+    }
+
+    return entropy;
+}
+
+double entropyOfStatus(double probFactor)
 {
     int validCombos = 0;
 
-    int *indices = malloc(sizeof(int) * numWords);
+    // indices used for multi-word submissions
+    int * indices;
+
+    indices = malloc(sizeof(int) * numWords);
+
     for (int i = 0; i < numWords; i++)
         indices[i] = 0;
     indices[numWords - 1] = -1;
@@ -183,28 +261,32 @@ double entropyOfStatus()
                 overflow = 0;
         }
 
-        if (testCombination(indices)) {
-            // lol it worked
+        if (testCombination(indices)) { // combination worked
             validCombos++;
-            printf("this one worked %d %d\n", indices[0], indices[1]);
+            // printf("this one worked %d %d\n", indices[0], indices[1]);
         } else {
-            printf("this one didn't work %d %d\n", indices[0], indices[1]);
+            // printf("this one didn't work %d %d\n", indices[0], indices[1]);
         }
     }
-    return log2((double) validCombos);
+
+    free(indices);
+    free(currTested);
+
+    if (validCombos == 0) return -1.0; // essentially "infinite" entropy
+
+    printf("number combos: %d\n", validCombos);
+
+    // printf("%f\n", log2(validCombos / probFactor));
+
+    return probFactor * log2((double) validCombos / probFactor);
 }
 
-double entropyLieNotFound()
-{
-    return 0.0;
-}
 
-double entropy()
-{
-    if (status.lieFound)
-        return entropyLieFound(status);
-    return entropyLieNotFound(status);
-}
+
+
+/** Functions below this point not important */
+
+
 
 void populateWordsList()
 {
@@ -251,9 +333,11 @@ void populateWordsList()
     }
 
     wordsList = malloc(numWords * maxWordsOverLengths * (wordMaxLength + 1) * sizeof(char));
+    
+    // printf("%d %d %d\n", numWords, maxWordsOverLengths, wordMaxLength + 1);
 
     if (DEBUG)
-        printf("Allocating %d bytes of memory\n", numWords * 50 * 21 * sizeof(char));
+        printf("Allocating %d bytes of memory\n", numWords * maxWordsOverLengths * (wordMaxLength + 1) * sizeof(char));
 
     rewind(wordsListFile);
 
@@ -262,13 +346,17 @@ void populateWordsList()
     for (int i = 0; i < numWords; i++)
         numPopulatedWords[i] = 0;
 
-    char *tempWord = malloc(wordMaxLength * sizeof(char) + 1);
+    printf("max length is %d\n", wordMaxLength);
+    char *tempWord = malloc(wordMaxLength * sizeof(char));
     currentWordLength = 0;
     c = fgetc(wordsListFile);
 
     while (c != EOF)
     {
-        tempWord[currentWordLength] = c;
+        if (currentWordLength < wordMaxLength) {
+            tempWord[currentWordLength] = c;
+        }
+        
         currentWordLength++;
 
         c = fgetc(wordsListFile);
@@ -279,7 +367,8 @@ void populateWordsList()
             {
                 if (currentWordLength == wordLengths[i])
                 {
-
+                    // printf("adding word to length %d\n", currentWordLength);
+                    
                     int index = ind2(i, numPopulatedWords[i]);
                     for (int j = 0; j < currentWordLength; j++)
                     {
@@ -303,8 +392,10 @@ void populateWordsList()
         for (int i = 0; i < numWords; i++)
         {
             printf("Words with length %d:\n", wordLengths[i]);
-            for (int j = 0; j < numWordsOfEachLength[i]; j++)
+            for (int j = 0; j < numWordsOfEachLength[i]; j++) {
                 printf("%s\n", wordsList + ind2(i, j));
+            }
+                
         }
     }
 
@@ -312,6 +403,13 @@ void populateWordsList()
     {
         totalPossibs *= numWordsOfEachLength[i];
     }
+
+    printf("total possibs: %d\n\n", totalPossibs);
+
+    free(numPopulatedWords);
+    free(tempWord);
+
+    fclose(wordsListFile);
 
     return;
 }
@@ -329,4 +427,23 @@ int ind2(int i, int j)
 int ind3(int i, int j, int k)
 {
     return i * (maxWordsOverLengths * (wordMaxLength + 1)) + j * (wordMaxLength + 1) + k;
+}
+
+void allocateCurrLetters()
+{
+    phraseLength = 0;
+    for (int i = 0; i < numWords; i++)
+    {
+        phraseLength += wordLengths[i];
+        if (i > 0)
+            phraseLength++; // add the space
+    }
+    currLetters = malloc(sizeof(char) * phraseLength);
+
+    for (int i = 0; i < phraseLength; i++)
+    {
+        currLetters[i] = ' ';
+    }
+
+    return;
 }
