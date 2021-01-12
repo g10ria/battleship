@@ -113,7 +113,6 @@ void testCollide(int, int, int, int, int, int, int, int);
  */
 int main()
 {
-
     int inp1 = printWelcomeScreen();
 
     if (inp1 == 1)

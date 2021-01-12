@@ -1,6 +1,4 @@
-#ifndef battleship_h
-
-#define battleship_h
+#pragma once
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -8,5 +6,3 @@
 #include <time.h>
 
 #include "./hashmap.h"
-
-#endif

@@ -1,6 +1,4 @@
-#ifndef hashmapLite_h
-
-#define hashmapLite_h
+#pragma once
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -19,5 +17,3 @@ void put(int key, int value, struct entry *map);
 void printKeys(struct entry *map);
 
 int getSize();
-
-#endif
