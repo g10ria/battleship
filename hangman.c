@@ -13,8 +13,8 @@
 #define DEBUG 1        // set to 1 to print debug messages, 0 otherwise
 #define ALPH_LENGTH 27 // length of the alphabet
 
-#define WORDS_LIST_FILENAME "words/shortlist.txt"
-#define WORDS_SHORTLIST_FILENAME "words/longlist.txt"
+#define WORDS_LIST_FILENAME "words/longlist.txt"
+#define WORDS_SHORTLIST_FILENAME "words/shortlist.txt"
 #define MAX_PHRASE_LENGTH 1024
 
 /* ----- GLOBAL VARIABLES ----- */
@@ -56,6 +56,7 @@ int phraseLength;
 
 int numUnconfirmedMisses;
 
+// if the program is currently
 int testingLiePossibility;
 // the character that must be there
 char mustHaveLie;
