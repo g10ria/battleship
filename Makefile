@@ -4,8 +4,8 @@ headersDir=headers
 
 # deps = headers/battleship.h headers/hashmap.h
 
-Bobj = battleship.o hashmap.o
-Hobj =hangman.o
+Bobj = battleship.o hashmap.o mt.o
+Hobj = hangman.o
 
 %.o: %.c
 	$(compile) -c -o $@ $<

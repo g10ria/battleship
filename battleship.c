@@ -137,7 +137,8 @@ int main()
  */
 void init()
 {
-    srand(time(0));
+    // srand(time(0));
+    init_genrand(time(0));
     numGuesses = 0;
 
     // set all padding squares to 0 (padding)
@@ -635,6 +636,7 @@ int randomlyTestConfigs()
         // randomly select a config for each of the 5 ships (if not sunken)
         for (int j = 0; j < 5; j++)
         {
+            int index = genrand_int32() % numShipConfigs[j];
             if (!sunken[j])
                 testedShipConfigs[j] = shipConfigs[j][rand() % numShipConfigs[j]];
             else

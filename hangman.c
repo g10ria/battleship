@@ -13,8 +13,8 @@
 #define DEBUG 1        // set to 1 to print debug messages, 0 otherwise
 #define ALPH_LENGTH 27 // length of the alphabet
 
-#define WORDS_LIST_FILENAME "words/list.txt"
-#define WORDS_SHORTLIST_FILENAME "words/shortlist.txt"
+#define WORDS_LIST_FILENAME "words/shortlist.txt"
+#define WORDS_SHORTLIST_FILENAME "words/longlist.txt"
 #define MAX_PHRASE_LENGTH 1024
 
 /* ----- GLOBAL VARIABLES ----- */
@@ -365,7 +365,7 @@ int getStrictlyValidCombos()
 
         int testCombo = strictlyTestCombination(indices);
 
-        if (testCombo == 1)
+        if (testCombo)
         { // combination worked
             strictlyValidCombos++;
                     
@@ -376,16 +376,15 @@ int getStrictlyValidCombos()
                 {
                     // current character in the combination being tested
                     latestValidCombo[curr] = ch(j, indices[j], k);
+                    // printf("%c", latestValidCombo[curr]);
                     curr++;
                 }
+                // printf(" ");
                 latestValidCombo[curr] = ' ';
                 curr++;
             }
+            // printf("\n");
 
-        }
-        else if (testCombo == 2)
-        {
-            totalValidCombos++;
         }
     }
 
@@ -409,28 +408,32 @@ int strictlyTestCombination(int *indices)
             // current character in the combination being tested
             c = ch(j, indices[j], k);
 
-            if (alphabet[c - 97] == 2 || alphabet[c - 97] == 3)
-            {
-                hitAMiss[c - 97] = 1;
-            }
+            if (alphabet[charToIndex(c)] == 2) return 0; // hit a confirmed miss
+
+            // if (alphabet[charToIndex(c)] == 3)
+            // {
+            //     hitAMiss[charToIndex(c)] = 1;
+            // }
 
             // if the character doesn't match the template
             if (currLetters[curr] != '_' && ch(j, indices[j], k) != currLetters[curr]) return 0;
+            
             // hit character in a non-designated spot
-            if (alphabet[c-97] == 1 && currLetters[curr] != c) return 0;
+            if (alphabet[charToIndex(c)] == 1 && currLetters[curr] != c) return 0;
 
             curr++;
         }
         curr++;
     }
-    int sumOfHitsOnMisses = 0;
-    for(int i=0;i<ALPH_LENGTH;i++) if(hitAMiss[i]) sumOfHitsOnMisses++;
-    if (lieFound) {
-        if (sumOfHitsOnMisses>0) return 0;
-        return 1;
-    } else {
-        if (sumOfHitsOnMisses>1) return 0;
-    }
+    // todo - put this back
+    // int sumOfHitsOnMisses = 0;
+    // for(int i=0;i<ALPH_LENGTH;i++) if(hitAMiss[i]) sumOfHitsOnMisses++;
+    // if (lieFound) {
+    //     if (sumOfHitsOnMisses>0) return 0;
+    //     return 1;
+    // } else {
+    //     if (sumOfHitsOnMisses>1) return 0;
+    // }
     return 1;
 }
 
@@ -443,7 +446,7 @@ void promptGuess()
         }
         printf("\".\n");
 
-        numGuesses++; // add 1 for the last "guess"
+        numGuesses++;
 
         gameOver = 1;
         return;
@@ -615,6 +618,7 @@ int getLetterGuess() // this is a letter guess
 
     if (!lieFound && numUnconfirmedMisses > 0)
     { // guess lies
+    
         // printf("Now guessing lies\n");
         for (int i = 0; i < ALPH_LENGTH; i++)
         {
@@ -819,34 +823,6 @@ double entropyNoLie()
     // already been found and corrected
 }
 
-// probably not gonna use this
-void clearImpossibleLies()
-{
-    // if something going from a miss to a hit yields no results, then
-    // it's a confirmed miss (cannot have been a lie)
-    for (int i = 0; i < ALPH_LENGTH; i++)
-    {
-        if (alphabet[i] == 3)
-        {
-
-            alphabet[i] = 4; // set to must have
-            mustHaveLie = indexToChar(i);
-            testingLiePossibility = 1;
-
-            if (entropyOfStatus(1.0) < 0) // invalid
-            {
-                printf("%c is a confirmed miss\n", i);
-                alphabet[i] = 2; // confirmed miss
-                numUnconfirmedMisses--;
-            }
-
-            testingLiePossibility = 0;
-        }
-    }
-
-    return;
-}
-
 double entropyWithLie()
 {
     if (numUnconfirmedMisses == 0 || lieFound)
@@ -861,7 +837,9 @@ double entropyWithLie()
 
     testingLiePossibility = 0;
 
-    entropy += entropyOfStatus(probOfNotLie);
+    double e = entropyOfStatus(probOfNotLie);
+    // if (e != DBL_MAX) entropy += e;
+    entropy += e;
 
     // printf("entropy before adding misses: %f\n", entropy);
 
@@ -874,8 +852,9 @@ double entropyWithLie()
             mustHaveLie = indexToChar(i);
             testingLiePossibility = 1;
 
-            double e = entropyOfStatus(probOfLie);
-            if (e != DBL_MAX) entropy += e;
+            e = entropyOfStatus(probOfLie);
+            // if (e != DBL_MAX) entropy += e;
+            entropy += e;
 
             testingLiePossibility = 0;
             alphabet[i] = 3;
